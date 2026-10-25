@@ -1,0 +1,7 @@
+schema: "classroom50/repo-config/v1"
+classroom: "ps-uclv-2026-2027"
+assignment: "proyecto-integrador-ps-uclv-2026-2027"
+owner:
+  username: "pedroDavid050605"
+  id: 254601288
+  accepted_at: "2026-10-25T17:36:10Z"
