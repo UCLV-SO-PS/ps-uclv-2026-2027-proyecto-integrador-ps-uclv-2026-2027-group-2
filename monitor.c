@@ -2,8 +2,6 @@
 #include <string.h>
 #include "monitor.h"
 
-/* ---- Parte A: la base de datos y la busqueda ---- */
-
 static const Episodio bd_episodios[] = {
     {"S01E01", "The Hedge Knight", 9.2, 45120},
     {"S01E02", "Hard Salt Beef", 8.8, 38900},
