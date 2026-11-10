@@ -8,16 +8,28 @@
 #define IP_SERVIDOR "127.0.0.1"
 #define BUFFER_SIZE 1024
 
+int validar_episodio(const char *codigo)
+{
+    if (codigo == NULL || strlen(codigo) != 6)
+        return 0;
+
+    return codigo[0] == 'S' &&
+        codigo[1] >= '0' && codigo[1] <= '9' &&
+        codigo[2] >= '0' && codigo[2] <= '9' &&
+        codigo[3] == 'E' &&
+        codigo[4] >= '0' && codigo[4] <= '9' &&
+        codigo[5] >= '0' && codigo[5] <= '9';
+}
+
 int main(int argc, char *argv[]){
 
     if(argc!=2){
         fprintf(stderr, "Debe insertar el codigo del episodio\n{uso: %s codigo de episodio }\n", argv[0]);
         exit(EXIT_FAILURE);
     }
-
-    const char *cod_epis = argv[1];
-    if(strlen(cod_epis) != 6){
-        fprintf(stderr, "El codigo del episodio debe tener 6 caracteres{Ejemplo: (S01E01)}\n");
+    char *cod_epis = argv[1];
+    if(!validar_episodio(cod_epis)){
+        fprintf(stderr, "El codigo del episodio no es valido(ej. S01E01)\n");
         exit(EXIT_FAILURE);
     }
 
@@ -32,7 +44,7 @@ int main(int argc, char *argv[]){
     memset(&server_addr, 0, sizeof(server_addr));
     server_addr.sin_family = AF_INET; 
     server_addr.sin_port = htons(PORT); 
-    server_addr.sin_addr.s_addr = inet_addr("127.0.0.1"); 
+    server_addr.sin_addr.s_addr = inet_addr(IP_SERVIDOR); 
 
 
     if (connect(client_socket, (struct sockaddr *)&server_addr, sizeof(server_addr)) < 0) {
