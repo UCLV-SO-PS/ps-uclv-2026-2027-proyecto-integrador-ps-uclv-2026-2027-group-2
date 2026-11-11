@@ -6,6 +6,7 @@
 #include <string.h>
 #include <unistd.h>
 #include "monitor.h"
+#include <arpa/inet.h>
 
 #define PUERTO 6666
 
@@ -54,7 +55,7 @@ void atender_cliente(int client_socket)
         fprintf(stderr, "Error al formatear la respuesta\n");
         return;
     }
-    
+
     send(client_socket, respuesta, (size_t)bytes_formateados, 0);
 }
 
@@ -94,19 +95,36 @@ int main(void)
             perror("Error en accept");
             continue;
         }
+        int tuberia[2];
+        if (pipe(tuberia) == -1) {
+            perror("Error en pipe");
+            close(client_socket);
+            continue;
+        }
 
         pid_t pid = fork();
         if (pid == -1) {
             perror("Error en fork");
             close(client_socket);
+            close(tuberia[0]);
+            close(tuberia[1]);
             continue;
         } else if (pid == 0) {
             close(server_socket);
+            close(tuberia[0]);
+            char *ip = inet_ntoa(client_addr.sin_addr);
+            write(tuberia[1], ip, strlen(ip) + 1); 
+            close(tuberia[1]);
             atender_cliente(client_socket);
             close(client_socket);
             exit(EXIT_SUCCESS);
         } else {
             close(client_socket);
+            close(tuberia[1]);
+            char ip[INET_ADDRSTRLEN] = {0};
+            read(tuberia[0], ip, sizeof(ip) - 1);
+            close(tuberia[0]);  
+            printf("Cliente %s atendido por el proceso hijo PID %d\n\n", ip, pid);
         }
     }
 
