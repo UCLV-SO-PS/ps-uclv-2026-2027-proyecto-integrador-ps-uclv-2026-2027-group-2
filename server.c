@@ -7,6 +7,8 @@
 #include <unistd.h>
 #include "monitor.h"
 #include <arpa/inet.h>
+#include <signal.h>
+#include <sys/wait.h>
 
 #define PUERTO 6666
 
@@ -59,8 +61,34 @@ void atender_cliente(int client_socket)
     send(client_socket, respuesta, (size_t)bytes_formateados, 0);
 }
 
+void manejador_sigchld(int sig)
+{
+    (void)sig;
+    while (waitpid(-1, NULL, WNOHANG) > 0)
+        ;
+}
 int main(void)
 {
+
+        struct sigaction sa_int;
+    memset(&sa_int, 0, sizeof(sa_int));
+    sa_int.sa_handler = SIG_IGN;
+    sigemptyset(&sa_int.sa_mask);
+    if (sigaction(SIGINT, &sa_int, NULL) == -1) {
+        perror("Error en sigaction SIGINT");
+        exit(EXIT_FAILURE);
+    }
+
+        struct sigaction sa_chld;
+    memset(&sa_chld, 0, sizeof(sa_chld));
+    sa_chld.sa_handler = manejador_sigchld;
+    sigemptyset(&sa_chld.sa_mask);
+    sa_chld.sa_flags = SA_RESTART;
+    if (sigaction(SIGCHLD, &sa_chld, NULL) == -1) {
+        perror("Error en sigaction SIGCHLD");
+        exit(EXIT_FAILURE);
+    }
+
     int server_socket, client_socket;
     server_socket = socket(AF_INET, SOCK_STREAM, 0);
     if (server_socket == -1) {
