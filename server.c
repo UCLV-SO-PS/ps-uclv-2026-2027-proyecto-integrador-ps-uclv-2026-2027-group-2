@@ -39,6 +39,8 @@ void atender_cliente(int client_socket)
 
     if (!validar_episodio(buffer)) {
         fprintf(stderr, "El codigo del episodio no es valido(ej. S01E01)\n");
+        const char *msg = "Codigo invalido (ej. S01E01)\n";
+        send(client_socket, msg, strlen(msg), 0);
         return;
     }
 
@@ -67,10 +69,100 @@ void manejador_sigchld(int sig)
     while (waitpid(-1, NULL, WNOHANG) > 0)
         ;
 }
-int main(void)
+int test_run(void)
 {
+    const char *codigos[] = {"S01E01", "S01E02", "S01E03",
+                             "S01E04", "S01E05", "S01E06"};
+    int total = (int)(sizeof(codigos) / sizeof(codigos[0]));
 
-        struct sigaction sa_int;
+    for (int i = 0; i < total; i++) {
+        if (buscar_episodio(codigos[i]) == NULL) {
+            fprintf(stderr, "[test-run] FALLO: la base de datos no tiene %s\n", codigos[i]);
+            return 1;
+        }
+    }
+    printf("[test-run] Base de datos OK (%d episodios)\n", total);
+
+    int srv = socket(AF_INET, SOCK_STREAM, 0);
+    if (srv == -1) {
+        perror("[test-run] socket");
+        return 1;
+    }
+    int opt = 1;
+    setsockopt(srv, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt));
+
+    struct sockaddr_in dir;
+    memset(&dir, 0, sizeof(dir));
+    dir.sin_family      = AF_INET;
+    dir.sin_addr.s_addr = htonl(INADDR_LOOPBACK);
+    dir.sin_port        = htons(PUERTO);
+
+    if (bind(srv, (struct sockaddr *)&dir, sizeof(dir)) == -1) {
+        perror("[test-run] bind");
+        close(srv);
+        return 1;
+    }
+    if (listen(srv, 1) == -1) {
+        perror("[test-run] listen");
+        close(srv);
+        return 1;
+    }
+
+    for (int i = 0; i < total; i++) {
+        int cli = socket(AF_INET, SOCK_STREAM, 0);
+        if (cli == -1 || connect(cli, (struct sockaddr *)&dir, sizeof(dir)) == -1) {
+            perror("[test-run] connect");
+            if (cli != -1) close(cli);
+            close(srv);
+            return 1;
+        }
+        if (send(cli, codigos[i], 6, 0) != 6) {
+            perror("[test-run] send");
+            close(cli);
+            close(srv);
+            return 1;
+        }
+        int conn = accept(srv, NULL, NULL);
+        if (conn == -1) {
+            perror("[test-run] accept");
+            close(cli);
+            close(srv);
+            return 1;
+        }
+        atender_cliente(conn);
+        close(conn);
+
+        char buf[1024], esperado[1024];
+        int n = recv(cli, buf, sizeof(buf) - 1, 0);
+        close(cli);
+        if (n <= 0) {
+            fprintf(stderr, "[test-run] FALLO: el socket no respondio para %s\n", codigos[i]);
+            close(srv);
+            return 1;
+        }
+        buf[n] = '\0';
+        int m = formatear_episodio(buscar_episodio(codigos[i]), esperado, sizeof(esperado));
+        if (m < 0 || strcmp(buf, esperado) != 0) {
+            fprintf(stderr, "[test-run] FALLO: respuesta inesperada para %s: %s\n", codigos[i], buf);
+            close(srv);
+            return 1;
+        }
+        printf("[test-run] %s OK\n", codigos[i]);
+    }
+    close(srv);
+    printf("[test-run] Socket responde correctamente (%d/%d episodios)\n", total, total);
+    printf("[test-run] OK\n");
+    return 0;
+}
+
+int main(int argc, char *argv[])
+{
+    if (argc == 2 && strcmp(argv[1], "--test-run") == 0)
+        return test_run();
+
+    setvbuf(stdout, NULL, _IOLBF, 0);
+
+    struct sigaction sa_int;
     memset(&sa_int, 0, sizeof(sa_int));
     sa_int.sa_handler = SIG_IGN;
     sigemptyset(&sa_int.sa_mask);
@@ -79,7 +171,7 @@ int main(void)
         exit(EXIT_FAILURE);
     }
 
-        struct sigaction sa_chld;
+    struct sigaction sa_chld;
     memset(&sa_chld, 0, sizeof(sa_chld));
     sa_chld.sa_handler = manejador_sigchld;
     sigemptyset(&sa_chld.sa_mask);
@@ -95,6 +187,9 @@ int main(void)
         perror("Error al crear el socket");
         exit(EXIT_FAILURE);
     }
+
+    int opt = 1;
+    setsockopt(server_socket, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt));
 
     struct sockaddr_in dir_servidor, client_addr;
     socklen_t client_addr_len = sizeof(client_addr);
