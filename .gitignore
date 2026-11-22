@@ -1,0 +1,6 @@
+*.o
+libmonitor.a
+server
+client
+prueba
+.vscode/
