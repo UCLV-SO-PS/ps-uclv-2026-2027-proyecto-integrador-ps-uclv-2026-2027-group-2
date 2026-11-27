@@ -6,10 +6,10 @@ Grupo 2 – repositorio `ps-uclv-2026-2027-proyecto-integrador-ps-uclv-2026-2027
 
 ## Integrantes
 
-| Nombre y apellidos | Usuario de GitHub |
-|---|---|
-| José Rafael Sánchez Correa | JoseR-SC |
-| Pedro David Hurtado Sarduy | pedroDavid050605 |
+| Nombre y apellidos | Usuario de GitHub | Nota |
+|---|---|---|
+| José Rafael Sánchez Correa | JoseR-SC | 5 |
+| Pedro David Hurtado Sarduy | pedroDavid050605 | 5 |
 
 ## Contenido
 
